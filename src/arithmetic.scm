@@ -44,7 +44,7 @@
                       ((4) euclidean-quotient)
                       ((5) balanced-quotient))
                     (arithmetic-shift (numerator r) n)
-                    (denominator n)))))))))
+                    (denominator r)))))))))
 
 ;;; Some simple functions
 ;;; There has to be some trade-off between computation time and space.
