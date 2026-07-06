@@ -83,7 +83,7 @@
                    abs-digit-string)))
 
 (define (CR->inexact x)
-  (let ((args (check-args 'CR->double (list x))))
+  (let ((args (check-args 'CR->inexact (list x))))
     (computable->inexact (car args))))
 
 (define Pi (make-CR computable-pi))
