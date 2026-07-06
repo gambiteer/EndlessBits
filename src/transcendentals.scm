@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define (computable-binary-splitting-partial-sum m n
                                                  partial-term
                                                  common-factor-ratio)

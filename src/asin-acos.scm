@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define computable-asin-reduced-arg
 
   ;; (asin x) where it's called with |x|<1/2

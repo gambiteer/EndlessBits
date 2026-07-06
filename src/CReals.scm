@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (include "exact-reals.scm")
 
 (*warn* #f)

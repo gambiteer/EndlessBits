@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define reduce-x-by-log-2
   (table-memoize
     (lambda (x)

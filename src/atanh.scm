@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define computable-atanh-reduced-arg
   ;; assumes |x|<= 1/4 (approximately) when called from computable-atanh
   ;; and     |x| <= (- (sqrt 2) 1) (+ (sqrt 2) 1)) \approx .17157287525380996

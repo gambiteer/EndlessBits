@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define *max-precision*
   (make-parameter
    16496    ;; will be overridden when *testing* is #t

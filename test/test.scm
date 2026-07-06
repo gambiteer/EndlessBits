@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 ;; You *must* load a compiled version of nextafter.scm for this to work.
 
 #|

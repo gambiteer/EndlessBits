@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define computable-atan-reduced-arg
   (letrec* ((common-factor-ratio
              (lambda (x)

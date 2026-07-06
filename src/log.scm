@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define (reduce-by-power-of-two x #!optional (precision (*max-precision*)))
   ;; return n and x-reduced with
   ;; \sqrt{1/2} <= x <= \sqrt 2

@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Braadley J Lucier
+;;; SPDX-License-Identifier: MIT
+;;;
 (define computable-sinh-reduced-arg
 
   ;; (sinh x) where $|x|\leq 1$, so $|sin(x)|<(e-e^{-1])/2$
