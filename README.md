@@ -53,7 +53,7 @@ There is no explicit routine for converting a finite, real Scheme number to a co
 ##### `Pi`, `E`
 Predefined constants. E.g.:
 ```
-> (define Ramanujan (CRexp (CR* Pi (CRsqrt 163))))
+> (define Ramanujan (CRexpt E (CR* Pi (CRsqrt 163))))
 > (CR->inexact Ramanujan)
 2.6253741264076874e17
 > (CR->string Ramanujan 10)
