@@ -62,21 +62,21 @@
     (CR->string x 100))
    ((x digits)
     (let* ((args (check-args 'CR->string (list x)))
-         (x (car args))
-         (x_p (compute-decimal-digits x digits))
-         (abs-x_p (abs x_p))
-         (digit-string (number->string abs-x_p))
-         (digit-string-length (string-length digit-string))
-         (abs-digit-string
-          (if (<= digit-string-length digits)
-              (string-append "0."
-                             (make-string (- digits digit-string-length) #\0)
-                             digit-string)
-              (string-append (substring digit-string 0 (- digit-string-length digits))
-                             "."
-                             (substring digit-string (- digit-string-length digits) digit-string-length)))))
-    (string-append (if (negative? x_p) "#e-" "#e")
-                   abs-digit-string)))))
+           (x (car args))
+           (x_p (compute-decimal-digits x digits))
+           (abs-x_p (abs x_p))
+           (digit-string (number->string abs-x_p))
+           (digit-string-length (string-length digit-string))
+           (abs-digit-string
+            (if (<= digit-string-length digits)
+		(string-append "0."
+                               (make-string (- digits digit-string-length) #\0)
+                               digit-string)
+		(string-append (substring digit-string 0 (- digit-string-length digits))
+                               "."
+                               (substring digit-string (- digit-string-length digits) digit-string-length)))))
+      (string-append (if (negative? x_p) "#e-" "#e")
+                     abs-digit-string)))))
 
 (define (CR->inexact x)
   (let ((args (check-args 'CR->inexact (list x))))
