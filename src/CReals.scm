@@ -11,64 +11,57 @@
   (proc read-only:))
 
 (define check-args
-  (let ((arg-indices
-         (list->vector
-          (map (lambda (n)
-                 (iota n 1))
-               (iota 11)))))
+  (case-lambda
+   ((name args)
+    (check-args name args (lambda (arg index) #t))) ;; a check on numbers beyond real? and finite?
+   ((name args arg-ok?)
+    (map (lambda (arg index)
+           #; (if (real? arg) (pp (arg-ok? arg index)))
+           (cond ((CR? arg)
+                  (CR-proc arg))
+                 ((and (real? arg)
+                       (finite? arg)
+                       (arg-ok? arg index))
+                  (if (and (not (= arg
+                                   (string->number
+                                    (string-append
+                                     "#e"
+                                     (number->string arg)))))
+                           (*warn*))
+                      (let ((number-representation
+                             (number->string arg)))
+                        (display (string-append
+                                  (symbol->string name)
+                                  ": Converting inexact argument "
+                                  (number->string index)
+                                  ", written as "
+                                  number-representation
+                                  ", to a computable real number "
+                                  "with value "
+                                  (number->string (exact arg))
+                                  ".")
+                                 (current-error-port))
+                        (newline (current-error-port))
+                        (display (string-append
+                                  "If you really meant the argument to have the exact value "
+                                  number-representation
+                                  ", write it as \"#e"
+                                  number-representation
+                                  "\".")
+                                 (current-error-port))
+                        (newline (current-error-port))))
+                  (->computable arg))
+                 (else
+                  (raise index))))
+         args
+         (iota (length args) 1)))))
 
-    (define (index-args len)
-      (if (<= len 10)
-          (vector-ref arg-indices len)
-          (iota len 1)))
-
-    (lambda (name
-             args
-             #!optional
-             (arg-ok? (lambda (arg index) #t))) ;; a check on numbers beyond real? and finite?
-      (map (lambda (arg index)
-             #; (if (real? arg) (pp (arg-ok? arg index)))
-             (cond ((CR? arg)
-                    (CR-proc arg))
-                   ((and (real? arg)
-                         (finite? arg)
-                         (arg-ok? arg index))
-                    (if (and (not (= arg
-                                     (string->number
-                                      (string-append
-                                       "#e"
-                                       (number->string arg)))))
-                             (*warn*))
-                        (let ((number-representation
-                               (number->string arg)))
-                          (display (string-append
-                                    (symbol->string name)
-                                    ": Converting inexact argument "
-                                    (number->string index)
-                                    ", written as "
-                                    number-representation
-                                    ", to a computable real number "
-                                    "with value "
-                                    (number->string (exact arg))
-                                    ".")
-                                   (current-error-port))
-                          (newline (current-error-port))
-                          (display (string-append
-                                    "If you really meant the argument to have the exact value "
-                                    number-representation
-                                    ", write it as \"#e"
-                                    number-representation
-                                    "\".")
-                                   (current-error-port))
-                          (newline (current-error-port))))
-                    (->computable arg))
-                   (else
-                    (raise index))))
-           args
-           (index-args (length args))))))
-
-(define (CR->string x #!optional (digits 100))
-  (let* ((args (check-args 'CR->string (list x)))
+(define CR->string
+  (case-lambda
+   ((x)
+    (CR->string x 100))
+   ((x digits)
+    (let* ((args (check-args 'CR->string (list x)))
          (x (car args))
          (x_p (compute-decimal-digits x digits))
          (abs-x_p (abs x_p))
@@ -83,7 +76,7 @@
                              "."
                              (substring digit-string (- digit-string-length digits) digit-string-length)))))
     (string-append (if (negative? x_p) "#e-" "#e")
-                   abs-digit-string)))
+                   abs-digit-string)))))
 
 (define (CR->inexact x)
   (let ((args (check-args 'CR->inexact (list x))))

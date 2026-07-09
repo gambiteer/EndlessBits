@@ -106,188 +106,198 @@
 
 (setup-primitives)
 
-(define (computable->inexact x #!optional (precision (*max-precision*)) (warn? (*warn*)))
+(define computable->inexact
+  (case-lambda
+   ((x)
+    (computable->inexact x (*max-precision*) (*warn*)))
+   ((x precision)
+    (computable->inexact x precision (*warn*)))
+   ((x precision warn?)
 
-  ;; correctly rounding a number that is exactly zero or halfway between two
-  ;; representable floating-point numbers is not computable, and
-  ;; this procedure may give a warning if perhaps given such a number
+    ;; correctly rounding a number that is exactly zero or halfway between two
+    ;; representable floating-point numbers is not computable, and
+    ;; this procedure may give a warning if perhaps given such a number
 
-  (define (two^p p)
-    (arithmetic-shift 1 p))
+    ;; This routine has a lot of "magic numbers" that work for IEEE double-precision
+    ;; floating-point arithmetic; these constants should be parameterized for
+    ;; various formats.
 
-  (define (maybe-warn-zero)
-    (if warn?
-        (pp "computable->inexact: May be trying to convert computable exact 0 to inexact; arbitrarily returning +0.0, not -0.0.")))
+    (define (two^p p)
+      (arithmetic-shift 1 p))
 
-  (define (maybe-warn-half)
-    (if warn?
-        (pp (string-append
-             "computable->inexact: May be trying to convert to inexact a computable number halfway between two adjacent double-precision "
-             "floating-point numbers; arbitrarily rounding to even."))))
+    (define (maybe-warn-zero)
+      (if warn?
+          (pp "computable->inexact: May be trying to convert computable exact 0 to inexact; arbitrarily returning +0.0, not -0.0.")))
 
-  (define (maybe-warn-small)
-    (if warn?
-        (pp (string-append
-             "computable->inexact: May be trying to convert a computable number halfway between zero and the first nonzero floating-point-number; "
-             "arbitrarily returning a zero with the correct sign."))))
+    (define (maybe-warn-half)
+      (if warn?
+          (pp (string-append
+               "computable->inexact: May be trying to convert to inexact a computable number halfway between two adjacent double-precision "
+               "floating-point numbers; arbitrarily rounding to even."))))
 
-  (define (maybe-warn-infinity)
-    (if warn?
-        (pp (string-append
-             "computable->inexact: May be trying to convert to inexact a computable number exactly at the cutoff to round to infinity; "
-             "arbitrarily returning an infinity with the correct sign."))))
+    (define (maybe-warn-small)
+      (if warn?
+          (pp (string-append
+               "computable->inexact: May be trying to convert a computable number halfway between zero and the first nonzero floating-point-number; "
+               "arbitrarily returning a zero with the correct sign."))))
 
-  (if (<= precision 1075)
-      (error "computable->inexact: The precision argument must be at least 1076 bits:" precision))
+    (define (maybe-warn-infinity)
+      (if warn?
+          (pp (string-append
+               "computable->inexact: May be trying to convert to inexact a computable number exactly at the cutoff to round to infinity; "
+               "arbitrarily returning an infinity with the correct sign."))))
 
-  (cond
-   ((eq? x computable-zero)          0.)
-   ((eq? x computable-one)           1.)
-   ((eq? x computable-negative-one) -1.)
-   (else
-    (let loop1 ((p 0))
-      (let ((x_p (x p)))
-        (if (<= (abs x_p) 1)
-            (cond
-             ((and (< 1075 p) ;; (expt -1075) is the largest number rounding to zero
-                   (= (abs x_p) 1))
-              ;; we know x rounds to zero, and we know its sign
-              (* 0.0 x_p))
-             ((< precision p)
+    (if (<= precision 1075)
+        (error "computable->inexact: The precision argument must be at least 1076 bits:" precision))
 
-              ;; Because precision >= 1076 and the previous
-              ;; condition was negative, we know x_p=0
-              ;; We've computed at least precision bits to the right of the
-              ;; binary point, and haven't found any significant bits.
+    (cond
+     ((eq? x computable-zero)          0.)
+     ((eq? x computable-one)           1.)
+     ((eq? x computable-negative-one) -1.)
+     (else
+      (let loop1 ((p 0))
+        (let ((x_p (x p)))
+          (if (<= (abs x_p) 1)
+              (cond
+               ((and (< 1075 p) ;; (expt -1075) is the largest number rounding to zero
+                     (= (abs x_p) 1))
+                ;; we know x rounds to zero, and we know its sign
+                (* 0.0 x_p))
+               ((< precision p)
 
-              ;; We warn and arbitrarily return +0.
+                ;; Because precision >= 1076 and the previous
+                ;; condition was negative, we know x_p=0
+                ;; We've computed at least precision bits to the right of the
+                ;; binary point, and haven't found any significant bits.
 
-              (maybe-warn-zero)
-              +0.)
-             (else
-              (loop1 (+ (* 2 p) 1))))
-            (let ((p (+ p 52)))
-              (let* ((x_p
-                      (x p))
-                     (abs-x_p
-                      (abs x_p))
-                     (abs-x_p/2^p
-                      (/ abs-x_p (two^p p)))
-                     (inexact-abs-x_p/2^p            ;; possible answer
-                      (exact->inexact abs-x_p/2^p)))
-                (cond
-                 ((flinfinite? inexact-abs-x_p/2^p)
-                  (case (computable-< (computable-abs x)
-                                      ;; smallest number that rounds to +inf.0
-                                      (->computable (* (expt 2 1023) (- 2 (* 1/2 (expt 2 -52))))))
-                    ((1)
-                     ;; we're sure that (abs x) is < rounding cutoff
-                     (* (if (negative? x_p) -1.0 +1.0)
-                        ;; largest finite inexact
-                        (inexact (* (expt 2 1023) (- 2 (expt 2 -52))))))
-                    ((-1)
-                     ;; we're sure that (abs x) is > rounding cutoff
-                     (* x_p +inf.0))
-                    (else ;; (0)
-                     ;; We may be trying to round a number at the rounding cutoff
-                     (maybe-warn-infinity)
-                     (* x_p +inf.0))))
-                 ((flzero? inexact-abs-x_p/2^p)
-                  (case (computable-<
-                         ;; smallest positive number that rounds to zero
-                         (->computable (expt 2 -1075))
-                         (computable-abs x))
-                    ((1)
-                     ;; we're sure that (abs x) is above the cutoff
-                     (if (negative? x_p) -5e-324 5e-324))
-                    ((-1)
-                     ;; we're sure that (abs x) is below the cutoff
-                     (if (negative? x_p) -0.0 +0.0))
-                    (else ;; (0)
-                     (maybe-warn-small)
-                     (* x_p +0.0))))
-                 (else
-                  (let ((abs-result
-                         (let ((exact-inexact-abs-x_p/2^p
-                                (exact inexact-abs-x_p/2^p))
-                               (abs-x
-                                (computable-abs x)))
+                ;; We warn and arbitrarily return +0.
 
-                           (define (choose-simpler-adjacent-exact-double low high)
-                             ;; low and high are both dyadic rationals, i.e,
-                             ;; their denominators are powers of two
-                             (cond ((= (integer-length (denominator low))
-                                       (integer-length (denominator high)))
-                                    ;; both denominators are 1
-                                    (if (< (- (integer-length low)
-                                              (first-set-bit low))
-                                           (- (integer-length high)
-                                              (first-set-bit high)))
-                                        (inexact low)
-                                        (inexact high)))
-                                   ((< (integer-length (denominator low))
-                                       (integer-length (denominator high)))
-                                    (inexact low))
-                                   (else
-                                    (inexact high))))
+                (maybe-warn-zero)
+                +0.)
+               (else
+                (loop1 (+ (* 2 p) 1))))
+              (let ((p (+ p 52)))
+                (let* ((x_p
+                        (x p))
+                       (abs-x_p
+                        (abs x_p))
+                       (abs-x_p/2^p
+                        (/ abs-x_p (two^p p)))
+                       (inexact-abs-x_p/2^p            ;; possible answer
+                        (exact->inexact abs-x_p/2^p)))
+                  (cond
+                   ((flinfinite? inexact-abs-x_p/2^p)
+                    (case (computable-< (computable-abs x)
+                                        ;; smallest number that rounds to +inf.0
+                                        (->computable (* (expt 2 1023) (- 2 (* 1/2 (expt 2 -52))))))
+                      ((1)
+                       ;; we're sure that (abs x) is < rounding cutoff
+                       (* (if (negative? x_p) -1.0 +1.0)
+                          ;; largest finite inexact
+                          (inexact (* (expt 2 1023) (- 2 (expt 2 -52))))))
+                      ((-1)
+                       ;; we're sure that (abs x) is > rounding cutoff
+                       (* x_p +inf.0))
+                      (else ;; (0)
+                       ;; We may be trying to round a number at the rounding cutoff
+                       (maybe-warn-infinity)
+                       (* x_p +inf.0))))
+                   ((flzero? inexact-abs-x_p/2^p)
+                    (case (computable-<
+                           ;; smallest positive number that rounds to zero
+                           (->computable (expt 2 -1075))
+                           (computable-abs x))
+                      ((1)
+                       ;; we're sure that (abs x) is above the cutoff
+                       (if (negative? x_p) -5e-324 5e-324))
+                      ((-1)
+                       ;; we're sure that (abs x) is below the cutoff
+                       (if (negative? x_p) -0.0 +0.0))
+                      (else ;; (0)
+                       (maybe-warn-small)
+                       (* x_p +0.0))))
+                   (else
+                    (let ((abs-result
+                           (let ((exact-inexact-abs-x_p/2^p
+                                  (exact inexact-abs-x_p/2^p))
+                                 (abs-x
+                                  (computable-abs x)))
 
-                           ;; (trace choose-simpler-adjacent-exact-double)
+                             (define (choose-simpler-adjacent-exact-double low high)
+                               ;; low and high are both dyadic rationals, i.e,
+                               ;; their denominators are powers of two
+                               (cond ((= (integer-length (denominator low))
+                                         (integer-length (denominator high)))
+                                      ;; both denominators are 1
+                                      (if (< (- (integer-length low)
+                                                (first-set-bit low))
+                                             (- (integer-length high)
+                                                (first-set-bit high)))
+                                          (inexact low)
+                                          (inexact high)))
+                                     ((< (integer-length (denominator low))
+                                         (integer-length (denominator high)))
+                                      (inexact low))
+                                     (else
+                                      (inexact high))))
 
-                           (call-with-values
+                             ;; (trace choose-simpler-adjacent-exact-double)
 
-                               (lambda ()
-                                 (if (<= inexact-abs-x_p/2^p (flexpt 2. -1022.))
-                                     ;; <= smallest positive normal number
-                                     (values
-                                      (expt 2 -1075)
-                                      (expt 2 -1075))
-                                     ;; > smallest positive normal number
-                                     (values
-                                      (expt 2 (- (integer-length (numerator   exact-inexact-abs-x_p/2^p))
-                                                 (integer-length (denominator exact-inexact-abs-x_p/2^p))
-                                                 53))
-                                      (expt 2 (- (integer-length (numerator   exact-inexact-abs-x_p/2^p))
-                                                 (integer-length (denominator exact-inexact-abs-x_p/2^p))
-                                                 (if (= (numerator exact-inexact-abs-x_p/2^p) 1)
-                                                     ;; the lower eps is 1/2 the upper eps
-                                                     54
-                                                     ;; the lower eps equals the upper eps
-                                                     53))))))
+                             (call-with-values
 
-                             (lambda (high-epsilon low-epsilon)
-                               (case (computable-< (->computable (+ exact-inexact-abs-x_p/2^p high-epsilon))
-                                                   abs-x)
-                                 ((1)
-                                  ;; you're sure that (abs x) is > half an epsilon higher
-                                  (inexact (+ exact-inexact-abs-x_p/2^p (* 2 high-epsilon))))
-                                 ((0)
-                                  ;; To precision bits to the right of the binary point,
-                                  ;; (abs x) is halway between two adjacent doubles.
-                                  (maybe-warn-half)
-                                  (choose-simpler-adjacent-exact-double
-                                   exact-inexact-abs-x_p/2^p
-                                   (+ exact-inexact-abs-x_p/2^p (* 2 high-epsilon))))
-                                 (else ;; (-1)
-                                  ;; you're sure that (abs x) is < than the upper round point
-                                  (case (computable-< abs-x
-                                                      (->computable (- exact-inexact-abs-x_p/2^p low-epsilon)))
-                                    ((1)
-                                     ;; you're positive that abs-x is less than the round value
-                                     (inexact (- exact-inexact-abs-x_p/2^p (* 2 low-epsilon))))
-                                    ((-1)
-                                     ;; you're sure that abs x is > the round value
-                                     ;; so you've correctly rounded already
-                                     inexact-abs-x_p/2^p)
-                                    (else ;; (0)
-                                     ;; To precision bits to the right of the binary point,
-                                     ;; (abs x) is halway between two adjacent doubles.
-                                     (maybe-warn-half)
-                                     (choose-simpler-adjacent-exact-double
-                                      exact-inexact-abs-x_p/2^p
-                                      (- exact-inexact-abs-x_p/2^p (* 2 low-epsilon))))))))))))
-                    (if (negative? x_p)
-                        (- abs-result)
-                        abs-result))))))))))))
+                                 (lambda ()
+                                   (if (<= inexact-abs-x_p/2^p (flexpt 2. -1022.))
+                                       ;; <= smallest positive normal number
+                                       (values
+                                        (expt 2 -1075)
+                                        (expt 2 -1075))
+                                       ;; > smallest positive normal number
+                                       (values
+                                        (expt 2 (- (integer-length (numerator   exact-inexact-abs-x_p/2^p))
+                                                   (integer-length (denominator exact-inexact-abs-x_p/2^p))
+                                                   53))
+                                        (expt 2 (- (integer-length (numerator   exact-inexact-abs-x_p/2^p))
+                                                   (integer-length (denominator exact-inexact-abs-x_p/2^p))
+                                                   (if (= (numerator exact-inexact-abs-x_p/2^p) 1)
+                                                       ;; the lower eps is 1/2 the upper eps
+                                                       54
+                                                       ;; the lower eps equals the upper eps
+                                                       53))))))
+
+                               (lambda (high-epsilon low-epsilon)
+                                 (case (computable-< (->computable (+ exact-inexact-abs-x_p/2^p high-epsilon))
+                                                     abs-x)
+                                   ((1)
+                                    ;; you're sure that (abs x) is > half an epsilon higher
+                                    (inexact (+ exact-inexact-abs-x_p/2^p (* 2 high-epsilon))))
+                                   ((0)
+                                    ;; To precision bits to the right of the binary point,
+                                    ;; (abs x) is halway between two adjacent doubles.
+                                    (maybe-warn-half)
+                                    (choose-simpler-adjacent-exact-double
+                                     exact-inexact-abs-x_p/2^p
+                                     (+ exact-inexact-abs-x_p/2^p (* 2 high-epsilon))))
+                                   (else ;; (-1)
+                                    ;; you're sure that (abs x) is < than the upper round point
+                                    (case (computable-< abs-x
+                                                        (->computable (- exact-inexact-abs-x_p/2^p low-epsilon)))
+                                      ((1)
+                                       ;; you're positive that abs-x is less than the round value
+                                       (inexact (- exact-inexact-abs-x_p/2^p (* 2 low-epsilon))))
+                                      ((-1)
+                                       ;; you're sure that abs x is > the round value
+                                       ;; so you've correctly rounded already
+                                       inexact-abs-x_p/2^p)
+                                      (else ;; (0)
+                                       ;; To precision bits to the right of the binary point,
+                                       ;; (abs x) is halway between two adjacent doubles.
+                                       (maybe-warn-half)
+                                       (choose-simpler-adjacent-exact-double
+                                        exact-inexact-abs-x_p/2^p
+                                        (- exact-inexact-abs-x_p/2^p (* 2 low-epsilon))))))))))))
+                      (if (negative? x_p)
+                          (- abs-result)
+                          abs-result))))))))))))))
 
 #|
 Let's say that we can know

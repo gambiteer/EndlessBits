@@ -222,19 +222,23 @@
                  (q (denominator r)))
              (computable-*-by-integer (computable-/-by-integer x q) p))))))
 
-(define (computable-inverse x #!optional (precision (*max-precision*)))
-  (cond
-   ((or (eq? x computable-one)
-        (eq? x computable-negative-one))
-    x)
-   ((eq? x computable-zero)
-    (error 'computable-inverse x))
-   (else
-    (let loop ((p 0))
-      (let ((abs_x_p (abs (x p))))
-        (cond
-         ((< 1 abs_x_p)
-          (let ((r (two^p<abs_m abs_x_p)))
+(define computable-inverse
+  (case-lambda
+   ((x)
+    (computable-inverse x (*max-precision*)))
+   ((x precision)
+    (cond
+     ((or (eq? x computable-one)
+          (eq? x computable-negative-one))
+      x)
+     ((eq? x computable-zero)
+      (error 'computable-inverse x))
+     (else
+      (let loop ((p 0))
+        (let ((abs_x_p (abs (x p))))
+          (cond
+           ((< 1 abs_x_p)
+            (let ((r (two^p<abs_m abs_x_p)))
               #|
               We have $|x_p|>2^r$ so $2^p|x|>2^r$ or $|x|>2^{r-p}$.
               Thus
@@ -287,17 +291,17 @@
               $$
 
               |#
-            (computable-memoize
-              (lambda (n)
-                (let ((k (max 0 (+ n 1 (* 2 (- p r))))))
-                  (NDIV (arithmetic-shift 1 (+ k n))
-                        (x k)))))))
-         ((<= precision p)
-          (if (zero? abs_x_p)
-              (error "computable-inverse: argument is zero to many bits: " p)
-              (error "computable-inverse: nonzero argument is zero to many bits: " p)))
-         (else
-          (loop (+ (* 2 p) 1)))))))))
+              (computable-memoize
+                (lambda (n)
+                  (let ((k (max 0 (+ n 1 (* 2 (- p r))))))
+                    (NDIV (arithmetic-shift 1 (+ k n))
+                          (x k)))))))
+           ((<= precision p)
+            (if (zero? abs_x_p)
+                (error "computable-inverse: argument is zero to many bits: " p)
+                (error "computable-inverse: nonzero argument is zero to many bits: " p)))
+           (else
+            (loop (+ (* 2 p) 1)))))))))))
 
 (define (computable-*2 x y)
   (cond ((or (eq? x computable-zero)
@@ -435,18 +439,22 @@
                (NDIV-2^p (square (x m))
                          (- (* 2 m) k))))))))
 
-(define (computable-< x y #!optional (precision (*max-precision*)))
-  ;; (positive? (computable-< x y)) means that you're sure that x < y
-  ;; (negative? (computable-< x y)) means that you're sure that y < x
-  ;; (zero? (computable-< x y)) means that you don't know, to precision bits
-  (if (eq? x y)
-      0
-      (let ((y-x (computable-- y x)))
-        (let loop ((p 0))
-          (let ((y-x_p (y-x p)))
-            (cond ((negative? y-x_p) -1)
-                  ((positive? y-x_p) +1)
-                  ((< precision p)    0)
-                  (else
-                   (loop (min (+ precision 1)
-                              (+ (* 2 p) 1))))))))))
+(define computable-<
+  (case-lambda
+   ((x y)
+    (computable-< x y (*max-precision*)))
+   ((x y precision)
+    ;; (positive? (computable-< x y)) means that you're sure that x < y
+    ;; (negative? (computable-< x y)) means that you're sure that y < x
+    ;; (zero? (computable-< x y)) means that you don't know, to precision bits
+    (if (eq? x y)
+        0
+        (let ((y-x (computable-- y x)))
+          (let loop ((p 0))
+            (let ((y-x_p (y-x p)))
+              (cond ((negative? y-x_p) -1)
+                    ((positive? y-x_p) +1)
+                    ((< precision p)    0)
+                    (else
+                     (loop (min (+ precision 1)
+                                (+ (* 2 p) 1))))))))))))
