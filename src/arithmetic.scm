@@ -376,7 +376,7 @@
              $$
              or
              $$
-             |\frac{x_m y_n}{2^{m+n-k}} -xy|<1/2.
+             |\frac{x_m y_n}{2^{m+n-k}} -2^k xy|<1/2.
              $$
 
              Since $\round(x_m y_n/2^{m+n-k})$ satisfies
