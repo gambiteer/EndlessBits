@@ -12,13 +12,13 @@ The library can be viewed as a companion piece to my paper [The Nature of Number
 
 This library is under active development, and in my limited experimentation is slower than some libraries and faster than others.  It works fine for single expressions, not so well with iterative computations, etc.
 
-I haven't settled yet on which Open Source license I'll use with the library.
+The library is released under the MIT License.
 
 ## Minimal Example
 
 Here's a minimal example for now.  Inside the `src` directory, do
 ```
-[MacBook-Pro:computational-reals/EndlessBits/src] lucier% gsi 
+[MacBook-Pro:computational-reals/EndlessBits/src] lucier% gsi
 Gambit v4.9.7-81-g90510e6d
 
 > (load "CReals")
@@ -33,7 +33,130 @@ Routines with names beginning with `CR` generally take as arguments either (exac
 
 In some circumstances it is necessary to remember that comparisons (`=`, `<`) is, in general, undecidable in the computable reals.  This means that if one is converting a computable real to an inexact floating-point number and one finds that, no matter how many fractional bits precision one computes, the approximation is always halfway between two adjacent floating-point numbers, then in theory the computation can never complete.  In practice, there is an internal parameter `*max-precision*` that represents that maximum number of fractional bits one computes before giving up and either failing or returning a default value.  The boolean parameter `*warn*` determines whether a warning is given when a default value is returned.
 
-### Converting computable real numbers
+#### Converting computable real numbers
+##### `(CR->string x #!optional (digits 100))`
+Produce a string that represents an approximation to `x` to `digits` fractional decimal digits.  E.g.:
+```
+(CR->string (CRsqrt 2) 20) => "#e1.41421356237309504880"
+```
+##### `(CR->inexact x)`
+Produce a double-precision approximation to `x`.  E.g.:
+```
+(CR->inexact (CRsqrt 3/7)) => .6546536707079772
+```
+#####`(CR+ x)`
+There is no explicit routine for converting a finite, real Scheme number to a computable real, but one can use `CR+`.  E.g.:
+```
+(CR->string (CR+ 3/7) 20) => "#e0.42857142857142857143"
+```
+#### Constants
+##### `Pi`, `E`
+Predefined constants. E.g.:
+```
+> (define Ramanujan (CRexp (CR* Pi (CRsqrt 163))))
+> (CR->inexact Ramanujan)
+2.6253741264076874e17
+> (CR->string Ramanujan 10)
+"#e262537412640768744.0000000000"
+> (CR->string Ramanujan 20)
+"#e262537412640768743.99999999999925007260"
+```
+#### Routines corresponding to Scheme routines
+##### CR+, CR*
+Routines that take zero or more arguments.  E.g.:
+```
+> (CR->inexact (CR+))
+0.
+> (CR->inexact (CR+ 3/7))
+.42857142857142855
+> (CR->inexact (CR*))
+1.
+> (CR->inexact (CR* 3/7))
+.42857142857142855
+```
+##### CR-, CR/, CRmax, CRmin
+Routines that take 1 or more arguments.  E.g.:
+```
+> (CR->inexact (CR- 3/7))
+-.42857142857142855
+> (CR->inexact (CR- 3/7 1/7))
+.2857142857142857
+> (CR->inexact (CR/ 3/7))
+2.3333333333333335
+> (CR->inexact (CR/ 3/7 1/7))
+3.
+> (CR->inexact (CRmax 4/7 1/7))
+.5714285714285714
+> (CR->inexact (CRmin 4/7 1/7))
+.14285714285714285
+```
+##### CRsquare, CRexp, CRsin, CRcos, CRatan, CRsinh, CRcosh, CRtanh, CRasinh
+Single argument functions whose domain consists of all computable real numbers.  E.g.:
+```
+> (map (lambda (op)
+         (CR->inexact (op 3/7)))
+       (list CRsquare CRexp CRsin CRcos CRatan CRsinh CRcosh CRtanh CRasinh)
+(.1836734693877551
+ 1.53506300925521
+ .415571854993052
+ .9095603516741667
+ .40489178628508343
+ .44181197586207716
+ 1.0932510333931327
+ .4041267397578592
+ .41643077489991215)
+```
+##### CRsqrt, CRlog, CRtan, CRasin, CRacos, CRacosh, CRatanh
+Single argument routines with domains that are not all computable real numbers.
 
-* `(CR->string x #!optional (digits 100))`: produce a string that represents an approximation to `x` to `digits` fractional decimal digits.  E.g.: ```(CR->string (CRsqrt 2) 20) => "#e1.41421356237309504880"```
-* `(CR->inexact x)`: produce a double-precision approximation to `x`.  E.g.,```(CR->inexact (CRsqrt 3/7)) => .6546536707079772```
+Errors are caught at different times---computability is a process. If given Scheme numbers outside the domain as arguments then the errors are caught immediately; if the arguments are computable real numbers then the errors are caught when they are notices.  E.g.:
+```
+> (CR->string (CRsqrt #e-1e-10000) 0)
+*** ERROR IN (stdin)@33.13-33.33 -- (Argument 1) Out of range
+(CRsqrt
+ -1/10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000... #62
+)
+1>
+;;; The same argument, only obscured.
+> (CR->string (CRsqrt (CR- 0 #e1e-10000)) 0)
+"#e0."
+> (CR->string (CRsqrt (CR- 0 #e1e-10000)) 5)
+"#e0.00000"
+> (CR->string (CRsqrt (CR- 0 #e1e-10000)) 10)
+"#e0.0000000000"
+> (CR->string (CRsqrt (CR- 0 #e1e-10000)) 1000)
+"#e0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+> (CR->string (CRsqrt (CR- 0 #e1e-10000)) 100000)
+*** ERROR IN loop, "basics.scm"@107.1 -- computable-sqrt: argument is negative:  #<procedure #61>
+   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ basics.scm ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ┃⋯
+106┃
+107┃(setup-primitives)
+108┃
+   ┃⋯
+1>
+```
+##### CRexpt
+Requires that the first argument is not negative
+```
+> (CR->inexact (CRexpt 3/7 1/2))
+.6546536707079772
+> (CR->inexact (CRexpt 3/7 -1/2))
+1.5275252316519468
+> (CR->inexact (CRexpt -3/7 1/2))
+*** ERROR IN CRexpt, "CReals.scm"@164.10-172.53 -- (Argument 1) Out of range
+(CRexpt -3/7 1/2)
+   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ CReals.scm ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ┃⋯
+163┃  (let ((args
+164┃         (with-exception-catcher
+165┃          (lambda (index)
+166┃            (##raise-range-exception index CRexpt x y))
+   ┃⋯
+170┃                        (lambda (arg index)
+171┃                          (not (and (= index 1)
+172┃                                    (<= arg 0)))))))))
+173┃    (make-CR
+   ┃⋯
+1>
+```
