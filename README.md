@@ -44,7 +44,7 @@ Produce a double-precision approximation to `x`.  E.g.:
 ```
 (CR->inexact (CRsqrt 3/7)) => .6546536707079772
 ```
-#####`(CR+ x)`
+##### `(CR+ x)`
 There is no explicit routine for converting a finite, real Scheme number to a computable real, but one can use `CR+`.  E.g.:
 ```
 (CR->string (CR+ 3/7) 20) => "#e0.42857142857142857143"
